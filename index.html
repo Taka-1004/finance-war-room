@@ -3,12 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>雙軌彈性再平衡戰情室 V15</title>
+    <title>雙軌彈性再平衡戰情室 V16</title>
     
     <!-- iOS Standalone Web App Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="投資戰情室">
+    
+    <!-- iOS App Icon (V16 新增預設高質感金融科技圖示) -->
+    <!-- 您可以將 href 替換為您自己 GitHub 上的圖片連結 -->
+    <link rel="apple-touch-icon" href="https://img.icons8.com/neon/256/experimental-coins-neon.png">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -19,6 +23,11 @@
             background-color: #f8fafc;
             color: #0f172a;
             -webkit-tap-highlight-color: transparent;
+            /* 修正動態島與 iOS 底部橫條的遮擋安全區 */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
         }
 
         .mono {
@@ -40,16 +49,17 @@
         }
     </style>
 </head>
-<body class="antialiased text-slate-900 min-h-screen pb-16 pt-safe">
+<body class="antialiased text-slate-900 min-h-screen">
 
-    <div class="max-w-6xl mx-auto px-4 md:px-6 py-6">
+    <!-- 主容器，增加 padding 確保與動態島保持美觀間距 -->
+    <div class="max-w-6xl mx-auto px-4 md:px-6 py-4">
         
         <!-- Header: System Stats -->
         <header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 pb-4 border-b border-slate-200 gap-4">
             <div>
                 <h1 class="text-xl md:text-2xl font-black tracking-tight flex items-center">
                     <span class="w-2.5 h-6 bg-blue-600 mr-2.5"></span>
-                    雙軌彈性再平衡主控台 <span class="text-slate-400 font-medium ml-2 text-xs">v15.0</span>
+                    雙軌彈性再平衡主控台 <span class="text-slate-400 font-medium ml-2 text-xs">v16.0</span>
                 </h1>
                 <p class="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">系統設定點 // 00662 (40%) : 00631L (50%) : 00865B (10%) 嚴格鎖定</p>
             </div>
@@ -262,7 +272,6 @@
     </div>
 
     <script>
-        // Version-independent persist keys
         const persistFields = [
             'val662', 'val631L', 'val865B',
             'start662', 'start631L', 'start865B',
@@ -270,7 +279,6 @@
             'monthlyInv', 'bonusInv'
         ];
 
-        // Save state to browser storage (Using version-independent namespace)
         function saveState() {
             persistFields.forEach(id => {
                 const element = document.getElementById(id);
@@ -280,7 +288,6 @@
             });
         }
 
-        // Load state from browser storage (Using version-independent namespace)
         function loadState() {
             persistFields.forEach(id => {
                 const storedValue = localStorage.getItem('rebalance_pro_data_' + id);
@@ -423,14 +430,11 @@
             while(fv < target && m < 480) { fv = fv * (1+r) + monthly; m++; }
             document.getElementById('reachTime').innerText = `${Math.floor(m/12)} 年 ${m%12} 月`;
 
-            // Auto-save State to localStorage after calculation triggers
             saveState();
         }
 
         window.onload = function() {
-            // 1. Initial Load of preserved user data (Using independent prefix)
             loadState();
-            // 2. Trigger first calculation and display render
             calculate();
         }
     </script>
