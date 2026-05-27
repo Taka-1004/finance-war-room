@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>雙軌彈性再平衡戰情室 V14</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .border-panel {
+            border: 1px solid #e2e8f0;
+        }
+
+        .action-buy { color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; }
+        .action-sell { color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; }
+        .action-hold { color: #475569; background: #f1f5f9; border: 1px solid #cbd5e1; }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="antialiased text-slate-900 min-h-screen pb-16">
+
+    <div class="max-w-6xl mx-auto px-4 md:px-6 py-6">
+        
+        <!-- Header: System Stats -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 pb-4 border-b border-slate-200 gap-4">
+            <div>
+                <h1 class="text-xl md:text-2xl font-black tracking-tight flex items-center">
+                    <span class="w-2.5 h-6 bg-blue-600 mr-2.5"></span>
+                    雙軌彈性再平衡主控台 <span class="text-slate-400 font-medium ml-2 text-xs">v14.0</span>
+                </h1>
+                <p class="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">系統設定點 // 00662 (40%) : 00631L (50%) : 00865B (10%) 嚴格鎖定</p>
+            </div>
+            <div class="flex gap-8 w-full md:w-auto justify-between md:justify-end">
+                <div class="text-right">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">當前組合總市值</span>
+                    <span id="totalAssets" class="text-2xl font-black mono tracking-tighter text-blue-600">--</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- COLUMN 1: INPUT MODULE (Left 5 cols) -->
+            <div class="lg:col-span-5 space-y-6">
+                
+                <!-- Section A: Live PV Inputs -->
+                <div class="bg-white p-5 rounded-2xl border-panel shadow-sm">
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex justify-between">
+                        <span>目前持倉市值 (PV)</span>
+                        <span id="exposureVal" class="text-slate-500 font-mono text-[10px] font-bold">--</span>
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div class="w-1/2">
+                                <span class="text-xs font-bold block">00662 原型</span>
+                                <span class="text-[10px] text-slate-400">NASDAQ-100 (40%)</span>
+                            </div>
+                            <div class="w-1/2 flex items-center">
+                                <input type="number" id="val662" value="600000" class="w-full text-right font-bold mono text-lg outline-none bg-slate-50 p-1.5 rounded border border-transparent focus:border-blue-500 focus:bg-white" oninput="calculate()">
+                                <span id="p662" class="text-[10px] text-slate-400 w-12 text-right font-mono ml-2">--</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div class="w-1/2">
+                                <span class="text-xs font-bold text-blue-600 block">00631L 正二</span>
+                                <span class="text-[10px] text-slate-400">台股 2X Leverage (50%)</span>
+                            </div>
+                            <div class="w-1/2 flex items-center">
+                                <input type="number" id="val631L" value="750000" class="w-full text-right font-bold mono text-lg text-blue-600 outline-none bg-slate-50 p-1.5 rounded border border-transparent focus:border-blue-500 focus:bg-white" oninput="calculate()">
+                                <span id="p631L" class="text-[10px] text-slate-400 w-12 text-right font-mono ml-2">--</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pb-1">
+                            <div class="w-1/2">
+                                <span class="text-xs font-bold text-emerald-600 block">00865B 短債</span>
+                                <span class="text-[10px] text-slate-400">類現金 UST 1-3Y (10%)</span>
+                            </div>
+                            <div class="w-1/2 flex items-center">
+                                <input type="number" id="val865B" value="150000" class="w-full text-right font-bold mono text-lg text-emerald-600 outline-none bg-slate-50 p-1.5 rounded border border-transparent focus:border-blue-500 focus:bg-white" oninput="calculate()">
+                                <span id="p865B" class="text-[10px] text-slate-400 w-12 text-right font-mono ml-2">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section B: Annual Baseline with Cost Offset Filter -->
+                <div class="bg-white p-5 rounded-2xl border-panel shadow-sm space-y-6">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">年度比較基準與成本過濾器</h2>
+                            <span class="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-bold uppercase">年初基準設定</span>
+                        </div>
+                        <div class="space-y-4 text-xs">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                                <span class="font-medium text-slate-500">00662 年初市值 (SP)</span>
+                                <input type="number" id="start662" value="400000" class="w-1/2 text-right font-bold mono bg-slate-50 p-1.5 rounded border border-slate-200 outline-none focus:border-blue-500" oninput="calculate()">
+                            </div>
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                                <span class="font-medium text-slate-500 text-blue-600">00631L 年初市值 (SP)</span>
+                                <input type="number" id="start631L" value="500000" class="w-1/2 text-right font-bold mono bg-slate-50 p-1.5 rounded border border-slate-200 outline-none focus:border-blue-500" oninput="calculate()">
+                            </div>
+                            <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+                                <span class="font-medium text-slate-500 text-emerald-600">00865B 年初市值 (SP)</span>
+                                <input type="number" id="start865B" value="100000" class="w-1/2 text-right font-bold mono bg-slate-50 p-1.5 rounded border border-slate-200 outline-none focus:border-blue-500" oninput="calculate()">
+                            </div>
+                            <div class="flex justify-between items-center pt-1 font-bold">
+                                <span class="text-slate-600">年初總資產 (合計)</span>
+                                <span id="startTotalDisplay" class="mono text-slate-800">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Offset Channels -->
+                    <div class="border-t border-slate-100 pt-4">
+                        <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">當年度已追加投入成本 (除年初本金外)</h3>
+                        <div class="space-y-3 text-xs">
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-500">00662 累計追加額</span>
+                                <input type="number" id="added662" value="24000" class="w-1/3 text-right font-bold mono bg-orange-50/30 p-1.5 rounded border border-orange-100 outline-none focus:border-orange-500" oninput="calculate()">
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-500 text-blue-600">00631L 累計追加額</span>
+                                <input type="number" id="added631L" value="30000" class="w-1/3 text-right font-bold mono bg-orange-50/30 p-1.5 rounded border border-orange-100 text-blue-600 outline-none focus:border-orange-500" oninput="calculate()">
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-500 text-emerald-600">00865B 累計追加額</span>
+                                <input type="number" id="added865B" value="6000" class="w-1/3 text-right font-bold mono bg-orange-50/30 p-1.5 rounded border border-orange-100 text-emerald-600 outline-none focus:border-orange-500" oninput="calculate()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section C: Inflows -->
+                <div class="bg-white p-5 rounded-2xl border-panel shadow-sm space-y-4">
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 block mb-1 uppercase tracking-wider">每月預計固定投入金額</span>
+                        <input type="number" id="monthlyInv" value="6000" class="w-full bg-slate-50 p-2.5 rounded border border-slate-200 text-lg font-bold mono outline-none focus:border-blue-600" oninput="calculate()">
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold text-orange-500 block mb-1 uppercase tracking-wider">單次大額加碼 (臨時注資)</span>
+                        <input type="number" id="bonusInv" value="0" class="w-full bg-orange-50/50 p-2.5 rounded border border-orange-200 text-lg font-bold mono outline-none text-orange-600 focus:border-orange-500" placeholder="0" oninput="calculate()">
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- COLUMN 2: DECISION ENGINE (Right 7 cols) -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- Monthly Soft Rebalancer -->
+                <div class="bg-white p-5 rounded-2xl border-panel shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">引擎 1：常態每月軟平衡建議</h2>
+                        <span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-bold uppercase">無摩擦損耗</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">本月定額建議投入標的</p>
+                            <p id="softTarget" class="text-lg md:text-xl font-bold text-blue-600">--</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">本月加碼總金額</p>
+                            <p id="softAmount" class="text-lg md:text-xl font-bold mono">--</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Annual Elastic Rebalancer -->
+                <div class="bg-white p-5 rounded-2xl border-panel shadow-sm">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">引擎 2：年度彈性再平衡模組 (年終執行)</h2>
+                        <span id="marketTrendTag" class="text-[10px] font-black px-2 py-0.5 rounded">未判定</span>
+                    </div>
+
+                    <!-- Change Indicators -->
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <span class="text-[10px] font-bold text-slate-400 block mb-1">00631L 實際年度損益 (扣除追加額)</span>
+                            <span id="netGain631LDisplay" class="text-sm font-bold mono">--</span>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <span class="text-[10px] font-bold text-slate-400 block mb-1">00631L 實際年報酬率 (淨值基準)</span>
+                            <span id="pct631LChange" class="text-sm font-bold mono">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Executable Command -->
+                    <div id="annualActionPanel" class="p-5 rounded-xl border flex flex-col justify-between items-start gap-4">
+                        <div class="w-full">
+                            <div class="flex justify-between items-center w-full">
+                                <span class="text-xs font-bold text-slate-800">平衡決策執行指令</span>
+                                <span id="annualExecBtn" class="px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-wider">--</span>
+                            </div>
+                            <div id="annualExecCmdContainer" class="space-y-2 mt-3">
+                                <!-- Dynamic line items for multi-transfer -->
+                            </div>
+                        </div>
+                        <p id="annualExecDesc" class="text-xs text-slate-500 leading-relaxed border-t border-slate-200/50 pt-3 w-full">
+                            請輸入數據，系統將自動依據 4:5:1 年初基線進行判定。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Navigation Target Tracker -->
+                <div class="grid grid-cols-2 gap-6 pt-6 border-t border-slate-200">
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">複利預估抵達千萬時間</span>
+                        <span id="reachTime" class="text-xl md:text-2xl font-bold mono">--</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">實質組合年化預估</span>
+                        <span class="text-xl md:text-2xl font-bold mono text-slate-400">18.20%</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Strategy Logic Documentation -->
+        <footer class="mt-12 pt-6 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6 text-[11px] text-slate-400 font-medium">
+            <div>
+                <h4 class="font-bold text-slate-600 mb-1.5 uppercase">📊 引擎 1 : 常態軟平衡 (Soft Rebalance)</h4>
+                <p class="leading-relaxed">
+                    每月定額投入時，系統會自動比對當前偏差。將每月固定投入與臨時大額加碼全數投入 **低於目標權重最多** 的標的。此動作不進行任何賣出，實現無損摩擦再平衡。
+                </p>
+            </div>
+            <div>
+                <h4 class="font-bold text-slate-600 mb-1.5 uppercase">⚡ 引擎 2 : 年度彈性再平衡 (Elastic Rebalance)</h4>
+                <p class="leading-relaxed">
+                    每年底執行一次。為了排除年中投入本金的干擾，系統會自動在年終獲利中扣除「追加投入成本」。<br>
+                    <strong class="text-slate-600">上漲年 (00631L 年度實質淨獲利 > 0)</strong>：賣出正二「實質獲利」的 30%。其中 **20% 轉買原型 00662**（繼續滾動），**10% 轉買短債 00865B**（0% 曝險鎖利儲備）。<br>
+                    <strong class="text-slate-600">下跌年 (00631L 年度實質淨獲利 <= 0)</strong>：賣出「年初總資產 (SP 合計)」的 2% 短債 (00865B) 買進正二，實施防守型反彈抄底。
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // All inputs that need to be persisted
+        const persistFields = [
+            'val662', 'val631L', 'val865B',
+            'start662', 'start631L', 'start865B',
+            'added662', 'added631L', 'added865B',
+            'monthlyInv', 'bonusInv'
+        ];
+
+        // Save state to browser storage
+        function saveState() {
+            persistFields.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    localStorage.setItem('v14_data_' + id, element.value);
+                }
+            });
+        }
+
+        // Load state from browser storage
+        function loadState() {
+            persistFields.forEach(id => {
+                const storedValue = localStorage.getItem('v14_data_' + id);
+                const element = document.getElementById(id);
+                if (storedValue !== null && element) {
+                    element.value = storedValue;
+                }
+            });
+        }
+
+        function calculate() {
+            // Inputs: Current Values (PV)
+            const v662 = parseFloat(document.getElementById('val662').value) || 0;
+            const v631L = parseFloat(document.getElementById('val631L').value) || 0;
+            const v865B = parseFloat(document.getElementById('val865B').value) || 0;
+            
+            // Inflows
+            const monthly = parseFloat(document.getElementById('monthlyInv').value) || 0;
+            const bonus = parseFloat(document.getElementById('bonusInv').value) || 0;
+            const totalInflow = monthly + bonus;
+
+            // Inputs: Annual Baseline Values (SP)
+            const s662 = parseFloat(document.getElementById('start662').value) || 0;
+            const s631L = parseFloat(document.getElementById('start631L').value) || 0;
+            const s865B = parseFloat(document.getElementById('start865B').value) || 0;
+
+            // Inputs: Capital Added during the year (Offsets)
+            const a662 = parseFloat(document.getElementById('added662').value) || 0;
+            const a631L = parseFloat(document.getElementById('added631L').value) || 0;
+            const a865B = parseFloat(document.getElementById('added865B').value) || 0;
+
+            // Display Annual Baseline Total
+            const startTotal = s662 + s631L + s865B;
+            document.getElementById('startTotalDisplay').innerText = `$ ${startTotal.toLocaleString()}`;
+
+            const totalNow = v662 + v631L + v865B;
+            document.getElementById('totalAssets').innerText = `$ ${totalNow.toLocaleString()}`;
+
+            // Current Percentages
+            const p662 = (v662 / totalNow * 100) || 0;
+            const p631L = (v631L / totalNow * 100) || 0;
+            const p865B = (v865B / totalNow * 100) || 0;
+
+            document.getElementById('p662').innerText = p662.toFixed(1) + '%';
+            document.getElementById('p631L').innerText = p631L.toFixed(1) + '%';
+            document.getElementById('p865B').innerText = p865B.toFixed(1) + '%';
+
+            // 00865B (UST 1-3Y) Exposure Factor is strictly 0. 00662 is 1x, 00631L is 2x.
+            const exposure = (v662 * 1) + (v631L * 2) + (v865B * 0);
+            const leverage = (exposure / totalNow).toFixed(3);
+            document.getElementById('exposureVal').innerText = `${leverage}x 實質曝險 (短債 0x)`;
+
+            // 1. Engine 1: Monthly Soft Rebalance
+            const deviations = [
+                { name: '00662 原型', gap: 40 - p662 },
+                { name: '00631L 正二', gap: 50 - p631L },
+                { name: '00865B 短債', gap: 10 - p865B }
+            ];
+            const softRebalanceTarget = deviations.sort((a, b) => b.gap - a.gap)[0];
+            document.getElementById('softTarget').innerText = softRebalanceTarget.name;
+            document.getElementById('softAmount').innerText = `$ ${totalInflow.toLocaleString()}`;
+
+            // 2. Engine 2: Annual Elastic Rebalance Logic (Deducting added capital for real gain calculation)
+            const netGain631L = v631L - s631L - a631L; // Exclude baseline and new contributions
+            const pctChange631L = s631L > 0 ? (netGain631L / s631L * 100) : 0;
+
+            document.getElementById('netGain631LDisplay').innerText = `${netGain631L >= 0 ? '+' : ''}$ ${Math.round(netGain631L).toLocaleString()}`;
+            document.getElementById('netGain631LDisplay').className = `text-sm font-bold mono ${netGain631L >= 0 ? 'text-blue-600' : 'text-red-500'}`;
+            document.getElementById('pct631LChange').innerText = `${pctChange631L >= 0 ? '+' : ''}${pctChange631L.toFixed(2)}%`;
+            document.getElementById('pct631LChange').className = `text-sm font-bold mono ${pctChange631L >= 0 ? 'text-blue-600' : 'text-red-500'}`;
+
+            const trendTag = document.getElementById('marketTrendTag');
+            const annualPanel = document.getElementById('annualActionPanel');
+            const annualCmdContainer = document.getElementById('annualExecCmdContainer');
+            const annualDesc = document.getElementById('annualExecDesc');
+            const annualBtn = document.getElementById('annualExecBtn');
+
+            // Judgment is strictly based on net gain (market profit) of 00631L
+            const isUpYear = netGain631L > 0;
+
+            if (isUpYear) {
+                trendTag.innerText = "📈 判定為：上漲年 (正二獲利扣除追加成本 > 0)";
+                trendTag.className = "text-[10px] font-black px-2 py-0.5 rounded bg-blue-100 text-blue-700";
+
+                const rebalanceTotal = Math.round(netGain631L * 0.3); // Total 30% sold from 00631L
+                const rebalancePrototype = Math.round(netGain631L * 0.2); // 20% to 00662
+                const rebalanceCash = Math.round(netGain631L * 0.1); // 10% to 00865B
+
+                annualPanel.className = "p-5 rounded-xl border border-blue-200 bg-blue-50/50 flex flex-col justify-between items-start gap-4";
+                annualBtn.className = "action-sell text-[10px] font-bold rounded uppercase tracking-wider px-2 py-0.5";
+                annualBtn.innerText = "執行交易 EXECUTING";
+                
+                annualCmdContainer.innerHTML = `
+                    <div class="flex justify-between font-black mono text-sm md:text-base text-red-600 border-b border-blue-100 pb-1.5">
+                        <span>賣出 00631L (正二)</span>
+                        <span>$ ${rebalanceTotal.toLocaleString()}</span>
+                    </div>
+                    <div class="flex justify-between font-bold mono text-xs md:text-sm text-blue-600 pt-1">
+                        <span>➜ 買入 00662 (20% 原型)</span>
+                        <span>$ ${rebalancePrototype.toLocaleString()}</span>
+                    </div>
+                    <div class="flex justify-between font-bold mono text-xs md:text-sm text-emerald-600">
+                        <span>➜ 買入 00865B (10% 短債)</span>
+                        <span>$ ${rebalanceCash.toLocaleString()}</span>
+                    </div>
+                `;
+
+                annualDesc.innerHTML = `
+                    <strong>動作解析：</strong> 00631L 扣除年初基準及年中追加本金後，<strong>年度實質淨獲利為 $${Math.round(netGain631L).toLocaleString()}</strong>。
+                    依更新策略：賣出此實質淨利之 30%（即 $${rebalanceTotal.toLocaleString()}）。
+                    其中 <strong>20%（$${rebalancePrototype.toLocaleString()}）買入 00662</strong> 繼續滾動成長，<strong>10%（$${rebalanceCash.toLocaleString()}）買入短債 00865B</strong>（0% 曝險鎖利儲備）。
+                `;
+            } else {
+                trendTag.innerText = "📉 判定為：下跌年 (正二無實質獲利或虧損)";
+                trendTag.className = "text-[10px] font-black px-2 py-0.5 rounded bg-red-100 text-red-700";
+
+                const rebalanceAmount = Math.round(startTotal * 0.02);
+                annualPanel.className = "p-5 rounded-xl border border-red-200 bg-red-50/50 flex flex-col justify-between items-start gap-4";
+                annualBtn.className = "action-buy text-[10px] font-bold rounded uppercase tracking-wider px-2 py-0.5";
+                annualBtn.innerText = "執行交易 EXECUTING";
+                
+                annualCmdContainer.innerHTML = `
+                    <div class="flex justify-between font-black mono text-sm md:text-base text-red-600 border-b border-red-100 pb-1.5">
+                        <span>賣出 00865B (短債 2%)</span>
+                        <span>$ ${rebalanceAmount.toLocaleString()}</span>
+                    </div>
+                    <div class="flex justify-between font-bold mono text-xs md:text-sm text-blue-600 pt-1">
+                        <span>➜ 買入 00631L (正二)</span>
+                        <span>$ ${rebalanceAmount.toLocaleString()}</span>
+                    </div>
+                `;
+
+                annualDesc.innerHTML = `<strong>動作解析：</strong> 00631L 扣除追加本金後並無實質利潤。判定為下跌年。依策略從短債（00865B）中，賣出<strong>年初總資產（$${Math.round(startTotal).toLocaleString()}）之 2% 金額（即 $${rebalanceAmount.toLocaleString()}）</strong>，全數買入 00631L 進行低點抄底。`;
+            }
+
+            // 3. Projection 
+            const r = 0.182 / 12;
+            const target = 10000000;
+            let m = 0; let fv = totalNow;
+            while(fv < target && m < 480) { fv = fv * (1+r) + monthly; m++; }
+            document.getElementById('reachTime').innerText = `${Math.floor(m/12)} 年 ${m%12} 月`;
+
+            // Auto-save State to localStorage after calculation triggers
+            saveState();
+        }
+
+        window.onload = function() {
+            // 1. Initial Load of preserved user data
+            loadState();
+            // 2. Trigger first calculation and display render
+            calculate();
+        }
+    </script>
+</body>
+</html>
