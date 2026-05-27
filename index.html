@@ -2,8 +2,14 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雙軌彈性再平衡戰情室 V14</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>雙軌彈性再平衡戰情室 V15</title>
+    
+    <!-- iOS Standalone Web App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="投資戰情室">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;700;800&display=swap');
@@ -34,7 +40,7 @@
         }
     </style>
 </head>
-<body class="antialiased text-slate-900 min-h-screen pb-16">
+<body class="antialiased text-slate-900 min-h-screen pb-16 pt-safe">
 
     <div class="max-w-6xl mx-auto px-4 md:px-6 py-6">
         
@@ -43,7 +49,7 @@
             <div>
                 <h1 class="text-xl md:text-2xl font-black tracking-tight flex items-center">
                     <span class="w-2.5 h-6 bg-blue-600 mr-2.5"></span>
-                    雙軌彈性再平衡主控台 <span class="text-slate-400 font-medium ml-2 text-xs">v14.0</span>
+                    雙軌彈性再平衡主控台 <span class="text-slate-400 font-medium ml-2 text-xs">v15.0</span>
                 </h1>
                 <p class="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">系統設定點 // 00662 (40%) : 00631L (50%) : 00865B (10%) 嚴格鎖定</p>
             </div>
@@ -256,7 +262,7 @@
     </div>
 
     <script>
-        // All inputs that need to be persisted
+        // Version-independent persist keys
         const persistFields = [
             'val662', 'val631L', 'val865B',
             'start662', 'start631L', 'start865B',
@@ -264,20 +270,20 @@
             'monthlyInv', 'bonusInv'
         ];
 
-        // Save state to browser storage
+        // Save state to browser storage (Using version-independent namespace)
         function saveState() {
             persistFields.forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
-                    localStorage.setItem('v14_data_' + id, element.value);
+                    localStorage.setItem('rebalance_pro_data_' + id, element.value);
                 }
             });
         }
 
-        // Load state from browser storage
+        // Load state from browser storage (Using version-independent namespace)
         function loadState() {
             persistFields.forEach(id => {
-                const storedValue = localStorage.getItem('v14_data_' + id);
+                const storedValue = localStorage.getItem('rebalance_pro_data_' + id);
                 const element = document.getElementById(id);
                 if (storedValue !== null && element) {
                     element.value = storedValue;
@@ -422,7 +428,7 @@
         }
 
         window.onload = function() {
-            // 1. Initial Load of preserved user data
+            // 1. Initial Load of preserved user data (Using independent prefix)
             loadState();
             // 2. Trigger first calculation and display render
             calculate();
