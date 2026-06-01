@@ -3,16 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>雙軌彈性再平衡戰情室 V17</title>
+    <title>雙軌彈性再平衡戰情室 V19.0</title>
     
     <!-- iOS Standalone Web App Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="槓桿人生">
-    
-    <!-- iOS App Icon (V17 更新：讀取您 GitHub 同目錄下的史努比槓桿圖標) -->
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -23,7 +19,6 @@
             background-color: #f8fafc;
             color: #0f172a;
             -webkit-tap-highlight-color: transparent;
-            /* 修正動態島與 iOS 底部橫條的遮擋安全區 */
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
             padding-left: env(safe-area-inset-left);
@@ -47,22 +42,36 @@
             -webkit-appearance: none;
             margin: 0;
         }
+
+        .toast-active {
+            transform: translateY(0);
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="antialiased text-slate-900 min-h-screen">
 
-    <!-- 主容器，增加 padding 確保與動態島保持美觀間距 -->
+    <!-- 主容器 -->
     <div class="max-w-6xl mx-auto px-4 md:px-6 py-4">
         
-        <!-- Header: System Stats -->
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 pb-4 border-b border-slate-200 gap-4">
+        <!-- Header: 系統資訊與配置切換 -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 pb-4 border-b border-slate-200 gap-4">
             <div>
                 <h1 class="text-xl md:text-2xl font-black tracking-tight flex items-center">
                     <span class="w-2.5 h-6 bg-blue-600 mr-2.5"></span>
-                    雙軌彈性再平衡主控台 <span class="text-slate-400 font-medium ml-2 text-xs">v17.0</span>
+                    雙軌彈性再平衡主控台 <span class="text-slate-400 font-medium ml-2 text-xs">v19.0 Isolation</span>
                 </h1>
-                <p class="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">系統設定點 // 00662 (40%) : 00631L (50%) : 00865B (10%) 嚴格鎖定</p>
+                
+                <!-- 快捷配置選單 -->
+                <div class="flex items-center gap-2 mt-3" id="profileTabs">
+                    <button onclick="switchProfile('TW')" id="tabTW" class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-200 transition-all bg-white hover:bg-slate-50">台股配置</button>
+                    <button onclick="switchProfile('US')" id="tabUS" class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-200 transition-all bg-white hover:bg-slate-50">美股配置</button>
+                    <button onclick="exportData()" class="ml-4 px-2 py-1 text-[10px] font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-md transition-all">導出配置</button>
+                    <button onclick="triggerImport()" class="px-2 py-1 text-[10px] font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-md transition-all">導入配置</button>
+                    <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
+                </div>
             </div>
+            
             <div class="flex gap-8 w-full md:w-auto justify-between md:justify-end">
                 <div class="text-right">
                     <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">當前組合總市值</span>
@@ -73,53 +82,123 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            <!-- COLUMN 1: INPUT MODULE (Left 5 cols) -->
+            <!-- COLUMN 1: 設定與輸入模組 (左側 5 欄) -->
             <div class="lg:col-span-5 space-y-6">
                 
-                <!-- Section A: Live PV Inputs -->
+                <!-- Section A: 核心目標與設定 -->
                 <div class="bg-white p-5 rounded-2xl border-panel shadow-sm">
-                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex justify-between">
-                        <span>目前持倉市值 (PV)</span>
-                        <span id="exposureVal" class="text-slate-500 font-mono text-[10px] font-bold">--</span>
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">核心參數設定</h2>
+                    <div class="grid grid-cols-3 gap-3 mb-4">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 block mb-1">原型目標 (%)</label>
+                            <input type="number" id="targetRatio1" class="w-full bg-slate-50 p-2 rounded border border-slate-200 mono text-center font-bold outline-none focus:border-blue-500" oninput="calculate()">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 block mb-1">正二目標 (%)</label>
+                            <input type="number" id="targetRatio2" class="w-full bg-slate-50 p-2 rounded border border-slate-200 mono text-center font-bold outline-none focus:border-blue-500" oninput="calculate()">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 block mb-1">短債目標 (%)</label>
+                            <input type="number" id="targetRatio3" class="w-full bg-slate-50 p-2 rounded border border-slate-200 mono text-center font-bold outline-none focus:border-blue-500" oninput="calculate()">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 block mb-1">終極資產目標</label>
+                        <input type="number" id="finalTarget" class="w-full bg-slate-50 p-2 rounded border border-slate-200 mono font-bold text-blue-600 outline-none focus:border-blue-500" oninput="calculate()">
+                    </div>
+                </div>
+                
+                <!-- Section B: 持倉市值 (PV) 區塊 -->
+                <div class="bg-white p-5 rounded-2xl border-panel shadow-sm">
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex justify-between items-center">
+                        <span>目前持倉市值 (PV) 與標的選擇</span>
+                        <select id="rebalanceMode" class="text-[10px] bg-slate-100 border border-slate-200 text-slate-600 font-bold rounded px-2 py-1 outline-none" onchange="calculate()">
+                            <option value="smart">聰明再平衡 (Smart)</option>
+                            <option value="standard">無腦再平衡 (Standard)</option>
+                        </select>
                     </h2>
                     
                     <div class="space-y-4">
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <div class="w-1/2">
-                                <span class="text-xs font-bold block">00662 原型</span>
-                                <span class="text-[10px] text-slate-400">NASDAQ-100 (40%)</span>
+                        
+                        <!-- Row 1: 原型 (Target 1) -->
+                        <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-3 gap-2">
+                            <div class="w-full md:w-1/2 space-y-1">
+                                <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider block">標的 1：原型資產</label>
+                                <select id="select1" class="text-xs font-bold bg-slate-100 border border-slate-200 rounded px-2 py-1 w-full outline-none focus:border-blue-500" onchange="onAssetSelect(1)">
+                                    <!-- 動態生成 -->
+                                </select>
+                                <input type="text" id="label1" class="text-xs font-medium bg-transparent border-b border-dashed border-slate-200 focus:border-blue-500 outline-none w-full py-0.5" oninput="calculate()">
                             </div>
-                            <div class="w-1/2 flex items-center">
-                                <input type="number" id="val662" value="600000" class="w-full text-right font-bold mono text-lg outline-none bg-slate-50 p-1.5 rounded border border-transparent focus:border-blue-500 focus:bg-white" oninput="calculate()">
-                                <span id="p662" class="text-[10px] text-slate-400 w-12 text-right font-mono ml-2">--</span>
+                            <div class="w-full md:w-1/2 flex items-center justify-between md:justify-end gap-2">
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase">當前市值</span>
+                                    <input type="number" id="val1" class="text-right font-bold mono text-lg outline-none bg-slate-50 p-1 rounded border border-transparent focus:border-blue-500 focus:bg-white w-28" oninput="calculate()">
+                                </div>
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase">預估 ROI %</span>
+                                    <input type="number" step="0.1" id="roi1" class="text-right font-bold mono text-xs outline-none bg-slate-50 p-1 rounded border border-slate-200 focus:border-blue-500 focus:bg-white w-14" oninput="calculate()">
+                                </div>
+                                <div class="text-right w-10">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase block">比例</span>
+                                    <span id="p1" class="text-[10px] font-bold text-slate-500 mono">--</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <div class="w-1/2">
-                                <span class="text-xs font-bold text-blue-600 block">00631L 正二</span>
-                                <span class="text-[10px] text-slate-400">台股 2X Leverage (50%)</span>
+                        <!-- Row 2: 正二 (Target 2) -->
+                        <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-3 gap-2">
+                            <div class="w-full md:w-1/2 space-y-1">
+                                <label class="text-[9px] font-black text-blue-400 uppercase tracking-wider block">標的 2：正二資產</label>
+                                <select id="select2" class="text-xs font-bold bg-slate-100 border border-slate-200 rounded px-2 py-1 w-full outline-none focus:border-blue-500 text-blue-600" onchange="onAssetSelect(2)">
+                                    <!-- 動態生成 -->
+                                </select>
+                                <input type="text" id="label2" class="text-xs font-medium text-blue-600 bg-transparent border-b border-dashed border-slate-200 focus:border-blue-500 outline-none w-full py-0.5" oninput="calculate()">
                             </div>
-                            <div class="w-1/2 flex items-center">
-                                <input type="number" id="val631L" value="750000" class="w-full text-right font-bold mono text-lg text-blue-600 outline-none bg-slate-50 p-1.5 rounded border border-transparent focus:border-blue-500 focus:bg-white" oninput="calculate()">
-                                <span id="p631L" class="text-[10px] text-slate-400 w-12 text-right font-mono ml-2">--</span>
+                            <div class="w-full md:w-1/2 flex items-center justify-between md:justify-end gap-2">
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase">當前市值</span>
+                                    <input type="number" id="val2" class="text-right font-bold mono text-lg text-blue-600 outline-none bg-slate-50 p-1 rounded border border-transparent focus:border-blue-500 focus:bg-white w-28" oninput="calculate()">
+                                </div>
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase">預估 ROI %</span>
+                                    <input type="number" step="0.1" id="roi2" class="text-right font-bold mono text-xs text-blue-600 outline-none bg-slate-50 p-1 rounded border border-slate-200 focus:border-blue-500 focus:bg-white w-14" oninput="calculate()">
+                                </div>
+                                <div class="text-right w-10">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase block">比例</span>
+                                    <span id="p2" class="text-[10px] font-bold text-slate-500 mono">--</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="flex items-center justify-between pb-1">
-                            <div class="w-1/2">
-                                <span class="text-xs font-bold text-emerald-600 block">00865B 短債</span>
-                                <span class="text-[10px] text-slate-400">類現金 UST 1-3Y (10%)</span>
+                        <!-- Row 3: 短債 (Target 3) -->
+                        <div class="flex flex-col md:flex-row md:items-center justify-between pb-1 gap-2">
+                            <div class="w-full md:w-1/2 space-y-1">
+                                <label class="text-[9px] font-black text-emerald-400 uppercase tracking-wider block">標的 3：短債保險箱</label>
+                                <select id="select3" class="text-xs font-bold bg-slate-100 border border-slate-200 rounded px-2 py-1 w-full outline-none focus:border-blue-500 text-emerald-600" onchange="onAssetSelect(3)">
+                                    <!-- 動態生成 -->
+                                </select>
+                                <input type="text" id="label3" class="text-xs font-medium text-emerald-600 bg-transparent border-b border-dashed border-slate-200 focus:border-blue-500 outline-none w-full py-0.5" oninput="calculate()">
                             </div>
-                            <div class="w-1/2 flex items-center">
-                                <input type="number" id="val865B" value="150000" class="w-full text-right font-bold mono text-lg text-emerald-600 outline-none bg-slate-50 p-1.5 rounded border border-transparent focus:border-blue-500 focus:bg-white" oninput="calculate()">
-                                <span id="p865B" class="text-[10px] text-slate-400 w-12 text-right font-mono ml-2">--</span>
+                            <div class="w-full md:w-1/2 flex items-center justify-between md:justify-end gap-2">
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase">當前市值</span>
+                                    <input type="number" id="val3" class="text-right font-bold mono text-lg text-emerald-600 outline-none bg-slate-50 p-1 rounded border border-transparent focus:border-blue-500 focus:bg-white w-28" oninput="calculate()">
+                                </div>
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase">預估 ROI %</span>
+                                    <input type="number" step="0.1" id="roi3" class="text-right font-bold mono text-xs text-emerald-600 outline-none bg-slate-50 p-1 rounded border border-slate-200 focus:border-blue-500 focus:bg-white w-14" oninput="calculate()">
+                                </div>
+                                <div class="text-right w-10">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase block">比例</span>
+                                    <span id="p3" class="text-[10px] font-bold text-slate-500 mono">--</span>
+                                </div>
                             </div>
                         </div>
+
                     </div>
                 </div>
 
-                <!-- Section B: Annual Baseline with Cost Offset Filter -->
+                <!-- Section C: 年度比較基準 (SP) 與 成本設定 -->
                 <div class="bg-white p-5 rounded-2xl border-panel shadow-sm space-y-6">
                     <div>
                         <div class="flex justify-between items-center mb-4">
@@ -128,16 +207,16 @@
                         </div>
                         <div class="space-y-4 text-xs">
                             <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                                <span class="font-medium text-slate-500">00662 年初市值 (SP)</span>
-                                <input type="number" id="start662" value="400000" class="w-1/2 text-right font-bold mono bg-slate-50 p-1.5 rounded border border-slate-200 outline-none focus:border-blue-500" oninput="calculate()">
+                                <span class="font-medium text-slate-500" id="baseLabel1">標的 1 年初 (SP)</span>
+                                <input type="number" id="start1" class="w-1/2 text-right font-bold mono bg-slate-50 p-1.5 rounded border border-slate-200 outline-none focus:border-blue-500" oninput="calculate()">
                             </div>
                             <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                                <span class="font-medium text-slate-500 text-blue-600">00631L 年初市值 (SP)</span>
-                                <input type="number" id="start631L" value="500000" class="w-1/2 text-right font-bold mono bg-slate-50 p-1.5 rounded border border-slate-200 outline-none focus:border-blue-500" oninput="calculate()">
+                                <span class="font-medium text-slate-500 text-blue-600" id="baseLabel2">標的 2 年初 (SP)</span>
+                                <input type="number" id="start2" class="w-1/2 text-right font-bold mono bg-slate-50 p-1.5 rounded border border-slate-200 outline-none focus:border-blue-500" oninput="calculate()">
                             </div>
                             <div class="flex justify-between items-center pb-2 border-b border-slate-100">
-                                <span class="font-medium text-slate-500 text-emerald-600">00865B 年初市值 (SP)</span>
-                                <input type="number" id="start865B" value="100000" class="w-1/2 text-right font-bold mono bg-slate-50 p-1.5 rounded border border-slate-200 outline-none focus:border-blue-500" oninput="calculate()">
+                                <span class="font-medium text-slate-500 text-emerald-600" id="baseLabel3">標的 3 年初 (SP)</span>
+                                <input type="number" id="start3" class="w-1/2 text-right font-bold mono bg-slate-50 p-1.5 rounded border border-slate-200 outline-none focus:border-blue-500" oninput="calculate()">
                             </div>
                             <div class="flex justify-between items-center pt-1 font-bold">
                                 <span class="text-slate-600">年初總資產 (合計)</span>
@@ -146,44 +225,40 @@
                         </div>
                     </div>
 
-                    <!-- Offset Channels -->
+                    <!-- 追加成本 -->
                     <div class="border-t border-slate-100 pt-4">
-                        <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">當年度已追加投入成本 (除年初本金外)</h3>
+                        <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">當年度已追加投入成本</h3>
                         <div class="space-y-3 text-xs">
                             <div class="flex justify-between items-center">
-                                <span class="text-slate-500">00662 累計追加額</span>
-                                <input type="number" id="added662" value="24000" class="w-1/3 text-right font-bold mono bg-orange-50/30 p-1.5 rounded border border-orange-100 outline-none focus:border-orange-500" oninput="calculate()">
+                                <span class="text-slate-500" id="addedLabel1">標的 1 累計追加額</span>
+                                <input type="number" id="added1" class="w-1/3 text-right font-bold mono bg-orange-50/30 p-1.5 rounded border border-orange-100 outline-none focus:border-orange-500" oninput="calculate()">
                             </div>
                             <div class="flex justify-between items-center">
-                                <span class="text-slate-500 text-blue-600">00631L 累計追加額</span>
-                                <input type="number" id="added631L" value="30000" class="w-1/3 text-right font-bold mono bg-orange-50/30 p-1.5 rounded border border-orange-100 text-blue-600 outline-none focus:border-orange-500" oninput="calculate()">
+                                <span class="text-slate-500 text-blue-600" id="addedLabel2">標的 2 累計追加額</span>
+                                <input type="number" id="added2" class="w-1/3 text-right font-bold mono bg-orange-50/30 p-1.5 rounded border border-orange-100 text-blue-600 outline-none focus:border-orange-500" oninput="calculate()">
                             </div>
                             <div class="flex justify-between items-center">
-                                <span class="text-slate-500 text-emerald-600">00865B 累計追加額</span>
-                                <input type="number" id="added865B" value="6000" class="w-1/3 text-right font-bold mono bg-orange-50/30 p-1.5 rounded border border-orange-100 text-emerald-600 outline-none focus:border-orange-500" oninput="calculate()">
+                                <span class="text-slate-500 text-emerald-600" id="addedLabel3">標的 3 累計追加額</span>
+                                <input type="number" id="added3" class="w-1/3 text-right font-bold mono bg-orange-50/30 p-1.5 rounded border border-orange-100 text-emerald-600 outline-none focus:border-orange-500" oninput="calculate()">
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Section C: Inflows -->
+                <!-- Section D: 注入資金 -->
                 <div class="bg-white p-5 rounded-2xl border-panel shadow-sm space-y-4">
                     <div>
                         <span class="text-[10px] font-bold text-slate-400 block mb-1 uppercase tracking-wider">每月預計固定投入金額</span>
-                        <input type="number" id="monthlyInv" value="6000" class="w-full bg-slate-50 p-2.5 rounded border border-slate-200 text-lg font-bold mono outline-none focus:border-blue-600" oninput="calculate()">
-                    </div>
-                    <div>
-                        <span class="text-[10px] font-bold text-orange-500 block mb-1 uppercase tracking-wider">單次大額加碼 (臨時注資)</span>
-                        <input type="number" id="bonusInv" value="0" class="w-full bg-orange-50/50 p-2.5 rounded border border-orange-200 text-lg font-bold mono outline-none text-orange-600 focus:border-orange-500" placeholder="0" oninput="calculate()">
+                        <input type="number" id="monthlyInv" class="w-full bg-slate-50 p-2.5 rounded border border-slate-200 text-lg font-bold mono outline-none focus:border-blue-600" oninput="calculate()">
                     </div>
                 </div>
 
             </div>
 
-            <!-- COLUMN 2: DECISION ENGINE (Right 7 cols) -->
+            <!-- COLUMN 2: 決策計算引擎 (右側 7 欄) -->
             <div class="lg:col-span-7 space-y-6">
                 
-                <!-- Monthly Soft Rebalancer -->
+                <!-- Engine 1: 常態軟平衡 -->
                 <div class="bg-white p-5 rounded-2xl border-panel shadow-sm">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">引擎 1：常態每月軟平衡建議</h2>
@@ -201,26 +276,26 @@
                     </div>
                 </div>
 
-                <!-- Annual Elastic Rebalancer -->
+                <!-- Engine 2: 年度彈性再平衡 -->
                 <div class="bg-white p-5 rounded-2xl border-panel shadow-sm">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">引擎 2：年度彈性再平衡模組 (年終執行)</h2>
-                        <span id="marketTrendTag" class="text-[10px] font-black px-2 py-0.5 rounded">未判定</span>
+                        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">引擎 2：年度再平衡模組 (年終執行)</h2>
+                        <span id="marketTrendTag" class="text-[10px] font-black px-2 py-0.5 rounded bg-slate-100 text-slate-500 uppercase">未判定</span>
                     </div>
 
-                    <!-- Change Indicators -->
-                    <div class="grid grid-cols-2 gap-4 mb-6">
+                    <!-- 實際績效回饋區 (聰明模式下顯示) -->
+                    <div id="smartStatsPanel" class="grid grid-cols-2 gap-4 mb-6">
                         <div class="bg-slate-50 p-4 rounded-xl">
-                            <span class="text-[10px] font-bold text-slate-400 block mb-1">00631L 實際年度損益 (扣除追加額)</span>
-                            <span id="netGain631LDisplay" class="text-sm font-bold mono">--</span>
+                            <span class="text-[10px] font-bold text-slate-400 block mb-1" id="statLabel1">標的 2 實際年度淨損益</span>
+                            <span id="netGain2Display" class="text-sm font-bold mono">--</span>
                         </div>
                         <div class="bg-slate-50 p-4 rounded-xl">
-                            <span class="text-[10px] font-bold text-slate-400 block mb-1">00631L 實際年報酬率 (淨值基準)</span>
-                            <span id="pct631LChange" class="text-sm font-bold mono">--</span>
+                            <span class="text-[10px] font-bold text-slate-400 block mb-1" id="statLabel2">標的 2 實際年報酬率</span>
+                            <span id="pctChange2Display" class="text-sm font-bold mono">--</span>
                         </div>
                     </div>
 
-                    <!-- Executable Command -->
+                    <!-- 執行指令區 -->
                     <div id="annualActionPanel" class="p-5 rounded-xl border flex flex-col justify-between items-start gap-4">
                         <div class="w-full">
                             <div class="flex justify-between items-center w-full">
@@ -228,214 +303,498 @@
                                 <span id="annualExecBtn" class="px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-wider">--</span>
                             </div>
                             <div id="annualExecCmdContainer" class="space-y-2 mt-3">
-                                <!-- Dynamic line items for multi-transfer -->
+                                <!-- 動態產出的指令項目 -->
                             </div>
                         </div>
                         <p id="annualExecDesc" class="text-xs text-slate-500 leading-relaxed border-t border-slate-200/50 pt-3 w-full">
-                            請輸入數據，系統將自動依據 4:5:1 年初基線進行判定。
+                            請輸入數據，系統將自動計算。
                         </p>
                     </div>
                 </div>
 
-                <!-- Navigation Target Tracker -->
+                <!-- 財富目標倒數與未來估算 -->
                 <div class="grid grid-cols-2 gap-6 pt-6 border-t border-slate-200">
                     <div>
-                        <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">複利預估抵達千萬時間</span>
-                        <span id="reachTime" class="text-xl md:text-2xl font-bold mono">--</span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1 text-blue-600">複利預估抵達目標時間</span>
+                        <span id="reachTime" class="text-xl md:text-2xl font-bold mono text-slate-700">--</span>
                     </div>
                     <div class="text-right">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">實質組合年化預估</span>
-                        <span class="text-xl md:text-2xl font-bold mono text-slate-400">18.20%</span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">組合加權預估年化</span>
+                        <span id="weightedRoI" class="text-xl md:text-2xl font-bold mono text-blue-600">--%</span>
                     </div>
                 </div>
 
             </div>
         </div>
 
-        <!-- Strategy Logic Documentation -->
+        <!-- 說明文件 -->
         <footer class="mt-12 pt-6 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6 text-[11px] text-slate-400 font-medium">
             <div>
                 <h4 class="font-bold text-slate-600 mb-1.5 uppercase">📊 引擎 1 : 常態軟平衡 (Soft Rebalance)</h4>
                 <p class="leading-relaxed">
-                    每月定額投入時，系統會自動比對當前偏差。將每月固定投入與臨時大額加碼全數投入 **低於目標權重最多** 的標的。此動作不進行任何賣出，實現無損摩擦再平衡。
+                    每月定額投入時，系統會比對實際權重與目標權重。將本期投入之固定與臨時加碼金額，全數注資於「低於目標權重最多」的單一標的。此過程不進行任何主動賣出，達成零交易稅與零手續費摩擦損耗的「軟平衡」。
                 </p>
             </div>
             <div>
-                <h4 class="font-bold text-slate-600 mb-1.5 uppercase">⚡ 引擎 2 : 年度彈性再平衡 (Elastic Rebalance)</h4>
+                <h4 class="font-bold text-slate-600 mb-1.5 uppercase">⚡ 引擎 2 : 年度再平衡模式</h4>
                 <p class="leading-relaxed">
-                    每年底執行一次。為了排除年中投入本金的干擾，系統會自動在年終獲利中扣除「追加投入成本」。<br>
-                    <strong class="text-slate-600">上漲年 (00631L 年度實質淨獲利 > 0)</strong>：賣出正二「實質獲利」的 30%。其中 **20% 轉買原型 00662**（繼續滾動），**10% 轉買短債 00865B**（0% 曝險鎖利儲備）。<br>
-                    <strong class="text-slate-600">下跌年 (00631L 年度實質淨獲利 <= 0)</strong>：賣出「年初總資產 (SP 合計)」的 2% 短債 (00865B) 買進正二，實施防守型反彈抄底。
+                    <strong>【聰明再平衡 (Smart)】</strong>：以高波動的「標的 2」年度績效為核心。若淨利大於 0，賣出實質獲利的 30%（其中 20% 轉買標的 1 以鎖定成長，10% 轉買標的 3 短債停泊防守）；若淨虧損，則賣出「年初總資產」的 2% 短債，全數買入標的 2 實施反彈抄底。<br>
+                    <strong>【無腦再平衡 (Standard)】</strong>：傳統強制平衡。不論盈虧或方向，於年末時直接執行賣多買少，使三者持倉權重嚴格回歸至目標比例。
                 </p>
             </div>
         </footer>
     </div>
 
+    <!-- Toast 提示組件 -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-lg transition-all duration-300 transform translate-y-20 opacity-0 flex items-center gap-2">
+        <span id="toastMsg">設定已自動存檔</span>
+    </div>
+
     <script>
-        const persistFields = [
-            'val662', 'val631L', 'val865B',
-            'start662', 'start631L', 'start865B',
-            'added662', 'added631L', 'added865B',
-            'monthlyInv', 'bonusInv'
+        // 隔離市場與槽位定位的標的預設庫
+        const assetPresets = {
+            'TW': {
+                'slot1': [ // 原型
+                    { value: '0050', label: '0050', display: '0050 (原型)', roi: 10, defaultName: '0050 (元大台灣50)' },
+                    { value: '00662', label: '00662', display: '00662 (原型)', roi: 15, defaultName: '00662 (富邦NASDAQ)' },
+                    { value: 'CUSTOM', label: '自定義', display: '自定義 (原型)', roi: 0, defaultName: '自定義原型標的' }
+                ],
+                'slot2': [ // 正二
+                    { value: '00631L', label: '00631L', display: '00631L (正二)', roi: 25, defaultName: '00631L (元大台灣50正2)' },
+                    { value: 'CUSTOM', label: '自定義', display: '自定義 (正二)', roi: 0, defaultName: '自定義正二標的' }
+                ],
+                'slot3': [ // 短債
+                    { value: '00865B', label: '00865B', display: '00865B (短債)', roi: 2, defaultName: '00865B (國泰美債1-3Y)' },
+                    { value: 'CUSTOM', label: '自定義', display: '自定義 (短債)', roi: 0, defaultName: '自定義短債標的' }
+                ]
+            },
+            'US': {
+                'slot1': [ // 原型
+                    { value: 'QQQ', label: 'QQQ', display: 'QQQ (原型)', roi: 15, defaultName: 'QQQ (Invesco納斯達克100)' },
+                    { value: 'CUSTOM', label: '自定義', display: '自定義 (原型)', roi: 0, defaultName: '自定義原型標的' }
+                ],
+                'slot2': [ // 正二
+                    { value: 'QLD', label: 'QLD', display: 'QLD (正二)', roi: 20, defaultName: 'QLD (ProShares納斯達克2倍)' },
+                    { value: 'CUSTOM', label: '自定義', display: '自定義 (正二)', roi: 0, defaultName: '自定義正二標的' }
+                ],
+                'slot3': [ // 短債 / 現金管理
+                    { value: 'BOXX', label: 'BOXX', display: 'BOXX (短債)', roi: 5, defaultName: 'BOXX (Alpha Architect Box)' },
+                    { value: 'CUSTOM', label: '自定義', display: '自定義 (短債)', roi: 0, defaultName: '自定義短債標的' }
+                ]
+            }
+        };
+
+        // 設定檔結構與初始預設值
+        const defaultProfiles = {
+            'TW': {
+                select1: '00662', label1: '00662 (富邦NASDAQ)', roi1: 15,
+                select2: '00631L', label2: '00631L (元大台灣50正2)', roi2: 25,
+                select3: '00865B', label3: '00865B (國泰美債1-3Y)', roi3: 2,
+                targetRatio1: 40, targetRatio2: 50, targetRatio3: 10,
+                finalTarget: 10000000,
+                val1: 600000, val2: 750000, val3: 150000,
+                start1: 400000, start2: 500000, start3: 100000,
+                added1: 24000, added2: 30000, added3: 6000,
+                monthlyInv: 6000,
+                rebalanceMode: 'smart'
+            },
+            'US': {
+                select1: 'QQQ', label1: 'QQQ (Invesco納斯達克100)', roi1: 15,
+                select2: 'QLD', label2: 'QLD (ProShares納斯達克2倍)', roi2: 20,
+                select3: 'BOXX', label3: 'BOXX (Alpha Architect Box)', roi3: 5,
+                targetRatio1: 30, targetRatio2: 30, targetRatio3: 40,
+                finalTarget: 300000,
+                val1: 20000, val2: 25000, val3: 15000,
+                start1: 15000, start2: 15000, start3: 10000,
+                added1: 1200, added2: 1200, added3: 1000,
+                monthlyInv: 500,
+                rebalanceMode: 'standard'
+            }
+        };
+
+        // 當前工作記憶體
+        let appState = {
+            currentProfile: 'TW',
+            profiles: JSON.parse(JSON.stringify(defaultProfiles))
+        };
+
+        const fields = [
+            'select1', 'select2', 'select3',
+            'label1', 'label2', 'label3',
+            'roi1', 'roi2', 'roi3',
+            'targetRatio1', 'targetRatio2', 'targetRatio3',
+            'finalTarget',
+            'val1', 'val2', 'val3',
+            'start1', 'start2', 'start3',
+            'added1', 'added2', 'added3',
+            'monthlyInv', 'rebalanceMode'
         ];
 
-        function saveState() {
-            persistFields.forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    localStorage.setItem('rebalance_pro_data_' + id, element.value);
-                }
-            });
-        }
-
-        function loadState() {
-            persistFields.forEach(id => {
-                const storedValue = localStorage.getItem('rebalance_pro_data_' + id);
-                const element = document.getElementById(id);
-                if (storedValue !== null && element) {
-                    element.value = storedValue;
-                }
-            });
-        }
-
-        function calculate() {
-            // Inputs: Current Values (PV)
-            const v662 = parseFloat(document.getElementById('val662').value) || 0;
-            const v631L = parseFloat(document.getElementById('val631L').value) || 0;
-            const v865B = parseFloat(document.getElementById('val865B').value) || 0;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('toast-active');
             
-            // Inflows
-            const monthly = parseFloat(document.getElementById('monthlyInv').value) || 0;
-            const bonus = parseFloat(document.getElementById('bonusInv').value) || 0;
-            const totalInflow = monthly + bonus;
+            setTimeout(() => {
+                toast.classList.remove('toast-active');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
 
-            // Inputs: Annual Baseline Values (SP)
-            const s662 = parseFloat(document.getElementById('start662').value) || 0;
-            const s631L = parseFloat(document.getElementById('start631L').value) || 0;
-            const s865B = parseFloat(document.getElementById('start865B').value) || 0;
+        function initStorage() {
+            const localData = localStorage.getItem('leveraged_life_v19');
+            if (localData) {
+                try {
+                    const parsed = JSON.parse(localData);
+                    if (parsed.currentProfile && parsed.profiles) {
+                        appState = parsed;
+                    }
+                } catch (e) {
+                    console.error('儲存庫解析失敗，還原為預設配置。', e);
+                }
+            }
+        }
 
-            // Inputs: Capital Added during the year (Offsets)
-            const a662 = parseFloat(document.getElementById('added662').value) || 0;
-            const a631L = parseFloat(document.getElementById('added631L').value) || 0;
-            const a865B = parseFloat(document.getElementById('added865B').value) || 0;
+        function saveToStorage() {
+            const pId = appState.currentProfile;
+            fields.forEach(fId => {
+                const el = document.getElementById(fId);
+                if (el) {
+                    if (el.type === 'number') {
+                        appState.profiles[pId][fId] = parseFloat(el.value) || 0;
+                    } else {
+                        appState.profiles[pId][fId] = el.value;
+                    }
+                }
+            });
+            localStorage.setItem('leveraged_life_v19', JSON.stringify(appState));
+        }
 
-            // Display Annual Baseline Total
-            const startTotal = s662 + s631L + s865B;
+        // 動態生成與當前市場隔離相容的下拉選項
+        function populateDropdownOptions(profileId) {
+            for (let i = 1; i <= 3; i++) {
+                const selectEl = document.getElementById(`select${i}`);
+                const slotKey = `slot${i}`;
+                const optionsList = assetPresets[profileId][slotKey];
+                
+                // 讀取暫存的選擇值
+                const savedVal = appState.profiles[profileId][`select${i}`] || optionsList[0].value;
+
+                selectEl.innerHTML = '';
+                optionsList.forEach(opt => {
+                    const optEl = document.createElement('option');
+                    optEl.value = opt.value;
+                    optEl.innerText = opt.display;
+                    selectEl.appendChild(optEl);
+                });
+
+                selectEl.value = savedVal;
+            }
+        }
+
+        // 下拉選單選擇回饋
+        function onAssetSelect(index) {
+            const pId = appState.currentProfile;
+            const selectValue = document.getElementById(`select${index}`).value;
+            const labelInput = document.getElementById(`label${index}`);
+            const roiInput = document.getElementById(`roi${index}`);
+
+            const optionsList = assetPresets[pId][`slot${index}`];
+            const selectedOpt = optionsList.find(o => o.value === selectValue);
+
+            if (selectedOpt && selectValue !== 'CUSTOM') {
+                labelInput.value = selectedOpt.defaultName;
+                roiInput.value = selectedOpt.roi;
+                labelInput.className = "text-xs font-medium bg-slate-50 border-b border-transparent focus:border-blue-500 outline-none w-full py-0.5 text-slate-500";
+                labelInput.readOnly = true;
+            } else {
+                labelInput.value = "自定義標的名稱";
+                roiInput.value = 0;
+                labelInput.className = "text-xs font-medium bg-white border-b border-dashed border-slate-300 focus:border-blue-500 outline-none w-full py-0.5 text-slate-800";
+                labelInput.readOnly = false;
+            }
+            calculate();
+        }
+
+        function switchProfile(profileId) {
+            // 1. 存儲現有數據
+            saveToStorage();
+
+            // 2. 切換配置識別碼
+            appState.currentProfile = profileId;
+
+            // 3. 渲染符合市場與槽位規則的選單選項
+            populateDropdownOptions(profileId);
+
+            // 4. 將當前配置檔的數值帶入 UI 控制項中
+            const targetData = appState.profiles[profileId];
+            fields.forEach(fId => {
+                const el = document.getElementById(fId);
+                if (el && targetData[fId] !== undefined) {
+                    el.value = targetData[fId];
+                }
+            });
+
+            // 5. 調整文字框編輯狀態外觀
+            [1, 2, 3].forEach(index => {
+                const selectValue = document.getElementById(`select${index}`).value;
+                const labelInput = document.getElementById(`label${index}`);
+                if (selectValue !== 'CUSTOM') {
+                    labelInput.className = "text-xs font-medium bg-slate-50 border-b border-transparent focus:border-blue-500 outline-none w-full py-0.5 text-slate-500";
+                    labelInput.readOnly = true;
+                } else {
+                    labelInput.className = "text-xs font-medium bg-white border-b border-dashed border-slate-300 focus:border-blue-500 outline-none w-full py-0.5 text-slate-800";
+                    labelInput.readOnly = false;
+                }
+            });
+
+            // 6. 更新頂部快速選單的 Active 樣式
+            const tabTW = document.getElementById('tabTW');
+            const tabUS = document.getElementById('tabUS');
+            
+            if (profileId === 'TW') {
+                tabTW.className = "px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg border border-blue-500 bg-blue-50 text-blue-600 transition-all";
+                tabUS.className = "px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-all";
+            } else {
+                tabTW.className = "px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-all";
+                tabUS.className = "px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg border border-blue-500 bg-blue-50 text-blue-600 transition-all";
+            }
+
+            calculate(true);
+            showToast(`已切換至 ${profileId === 'TW' ? '台股配置' : '美股配置'}`);
+        }
+
+        function exportData() {
+            saveToStorage();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `rebalance_war_room_v19.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast("配置導出成功！");
+        }
+
+        function triggerImport() {
+            document.getElementById('importFile').click();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.currentProfile && imported.profiles) {
+                        appState = imported;
+                        saveToStorage();
+                        switchProfile(appState.currentProfile);
+                        showToast("設定檔導入成功！");
+                    } else {
+                        showToast("格式不符，請使用本系統匯出的 JSON");
+                    }
+                } catch (err) {
+                    showToast("讀取失敗，非合法的 JSON 檔案");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // 核心計算引擎
+        function calculate(silent = false) {
+            const getVal = (id) => parseFloat(document.getElementById(id).value) || 0;
+            const getText = (id) => document.getElementById(id).value.trim();
+
+            const lbl1 = getText('label1'), lbl2 = getText('label2'), lbl3 = getText('label3');
+            const roi1 = getVal('roi1'), roi2 = getVal('roi2'), roi3 = getVal('roi3');
+            const tRatio1 = getVal('targetRatio1'), tRatio2 = getVal('targetRatio2'), tRatio3 = getVal('targetRatio3');
+            const val1 = getVal('val1'), val2 = getVal('val2'), val3 = getVal('val3');
+            const s1 = getVal('start1'), s2 = getVal('start2'), s3 = getVal('start3');
+            const a1 = getVal('added1'), a2 = getVal('added2'), a3 = getVal('added3');
+            const monthly = getVal('monthlyInv');
+            const finalGoal = getVal('finalTarget');
+            const rebalanceMode = document.getElementById('rebalanceMode').value;
+
+            // 動態年化加權組合回報率計算
+            const totalWeight = tRatio1 + tRatio2 + tRatio3;
+            const weightedRoI = totalWeight > 0 ? (((tRatio1 * roi1) + (tRatio2 * roi2) + (tRatio3 * roi3)) / totalWeight) : 0;
+            document.getElementById('weightedRoI').innerText = weightedRoI.toFixed(2) + '%';
+
+            // 即時同步其餘卡片的動態標籤
+            document.getElementById('baseLabel1').innerText = `${lbl1} 年初 (SP)`;
+            document.getElementById('baseLabel2').innerText = `${lbl2} 年初 (SP)`;
+            document.getElementById('baseLabel3').innerText = `${lbl3} 年初 (SP)`;
+            document.getElementById('addedLabel1').innerText = `${lbl1} 累計追加`;
+            document.getElementById('addedLabel2').innerText = `${lbl2} 累計追加`;
+            document.getElementById('addedLabel3').innerText = `${lbl3} 累計追加`;
+            document.getElementById('statLabel1').innerText = `${lbl2} 實際年度淨獲利`;
+            document.getElementById('statLabel2').innerText = `${lbl2} 實際年報酬率`;
+
+            const totalNow = val1 + val2 + val3;
+            const startTotal = s1 + s2 + s3;
+
+            document.getElementById('totalAssets').innerText = `$ ${totalNow.toLocaleString()}`;
             document.getElementById('startTotalDisplay').innerText = `$ ${startTotal.toLocaleString()}`;
 
-            const totalNow = v662 + v631L + v865B;
-            document.getElementById('totalAssets').innerText = `$ ${totalNow.toLocaleString()}`;
+            // 比重
+            const pct1 = (val1 / totalNow * 100) || 0;
+            const pct2 = (val2 / totalNow * 100) || 0;
+            const pct3 = (val3 / totalNow * 100) || 0;
 
-            // Current Percentages
-            const p662 = (v662 / totalNow * 100) || 0;
-            const p631L = (v631L / totalNow * 100) || 0;
-            const p865B = (v865B / totalNow * 100) || 0;
+            document.getElementById('p1').innerText = pct1.toFixed(1) + '%';
+            document.getElementById('p2').innerText = pct2.toFixed(1) + '%';
+            document.getElementById('p3').innerText = pct3.toFixed(1) + '%';
 
-            document.getElementById('p662').innerText = p662.toFixed(1) + '%';
-            document.getElementById('p631L').innerText = p631L.toFixed(1) + '%';
-            document.getElementById('p865B').innerText = p865B.toFixed(1) + '%';
-
-            // 00865B (UST 1-3Y) Exposure Factor is strictly 0. 00662 is 1x, 00631L is 2x.
-            const exposure = (v662 * 1) + (v631L * 2) + (v865B * 0);
-            const leverage = (exposure / totalNow).toFixed(3);
-            document.getElementById('exposureVal').innerText = `${leverage}x 實質曝險 (短債 0x)`;
-
-            // 1. Engine 1: Monthly Soft Rebalance
-            const deviations = [
-                { name: '00662 原型', gap: 40 - p662 },
-                { name: '00631L 正二', gap: 50 - p631L },
-                { name: '00865B 短債', gap: 10 - p865B }
+            // 1. 引擎 1 : 常態軟平衡 (每月定額偏離差校準)
+            const devs = [
+                { id: 1, name: lbl1, gap: tRatio1 - pct1 },
+                { id: 2, name: lbl2, gap: tRatio2 - pct2 },
+                { id: 3, name: lbl3, gap: tRatio3 - pct3 }
             ];
-            const softRebalanceTarget = deviations.sort((a, b) => b.gap - a.gap)[0];
-            document.getElementById('softTarget').innerText = softRebalanceTarget.name;
-            document.getElementById('softAmount').innerText = `$ ${totalInflow.toLocaleString()}`;
+            const deficient = devs.sort((a, b) => b.gap - a.gap)[0];
+            document.getElementById('softTarget').innerText = deficient.name;
+            document.getElementById('softAmount').innerText = `$ ${monthly.toLocaleString()}`;
 
-            // 2. Engine 2: Annual Elastic Rebalance Logic (Deducting added capital for real gain calculation)
-            const netGain631L = v631L - s631L - a631L; // Exclude baseline and new contributions
-            const pctChange631L = s631L > 0 ? (netGain631L / s631L * 100) : 0;
-
-            document.getElementById('netGain631LDisplay').innerText = `${netGain631L >= 0 ? '+' : ''}$ ${Math.round(netGain631L).toLocaleString()}`;
-            document.getElementById('netGain631LDisplay').className = `text-sm font-bold mono ${netGain631L >= 0 ? 'text-blue-600' : 'text-red-500'}`;
-            document.getElementById('pct631LChange').innerText = `${pctChange631L >= 0 ? '+' : ''}${pctChange631L.toFixed(2)}%`;
-            document.getElementById('pct631LChange').className = `text-sm font-bold mono ${pctChange631L >= 0 ? 'text-blue-600' : 'text-red-500'}`;
-
+            // 2. 引擎 2 : 年度彈性再平衡
             const trendTag = document.getElementById('marketTrendTag');
             const annualPanel = document.getElementById('annualActionPanel');
             const annualCmdContainer = document.getElementById('annualExecCmdContainer');
             const annualDesc = document.getElementById('annualExecDesc');
             const annualBtn = document.getElementById('annualExecBtn');
+            const smartStatsPanel = document.getElementById('smartStatsPanel');
 
-            // Judgment is strictly based on net gain (market profit) of 00631L
-            const isUpYear = netGain631L > 0;
+            if (rebalanceMode === 'standard') {
+                // 【無腦回歸目標比例模式】
+                smartStatsPanel.classList.add('hidden');
+                trendTag.innerText = "⚖️ 無腦常態再平衡 (回歸初始比例)";
+                trendTag.className = "text-[10px] font-black px-2 py-0.5 rounded bg-slate-100 text-slate-600";
 
-            if (isUpYear) {
-                trendTag.innerText = "📈 判定為：上漲年 (正二獲利扣除追加成本 > 0)";
-                trendTag.className = "text-[10px] font-black px-2 py-0.5 rounded bg-blue-100 text-blue-700";
+                const diff1 = Math.round((totalNow * tRatio1 / 100) - val1);
+                const diff2 = Math.round((totalNow * tRatio2 / 100) - val2);
+                const diff3 = Math.round((totalNow * tRatio3 / 100) - val3);
 
-                const rebalanceTotal = Math.round(netGain631L * 0.3); // Total 30% sold from 00631L
-                const rebalancePrototype = Math.round(netGain631L * 0.2); // 20% to 00662
-                const rebalanceCash = Math.round(netGain631L * 0.1); // 10% to 00865B
+                annualPanel.className = "p-5 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between items-start gap-4";
+                annualBtn.className = "action-hold text-[10px] font-bold rounded uppercase tracking-wider px-2 py-0.5";
+                annualBtn.innerText = "權重校準";
 
-                annualPanel.className = "p-5 rounded-xl border border-blue-200 bg-blue-50/50 flex flex-col justify-between items-start gap-4";
-                annualBtn.className = "action-sell text-[10px] font-bold rounded uppercase tracking-wider px-2 py-0.5";
-                annualBtn.innerText = "執行交易 EXECUTING";
-                
-                annualCmdContainer.innerHTML = `
-                    <div class="flex justify-between font-black mono text-sm md:text-base text-red-600 border-b border-blue-100 pb-1.5">
-                        <span>賣出 00631L (正二)</span>
-                        <span>$ ${rebalanceTotal.toLocaleString()}</span>
-                    </div>
-                    <div class="flex justify-between font-bold mono text-xs md:text-sm text-blue-600 pt-1">
-                        <span>➜ 買入 00662 (20% 原型)</span>
-                        <span>$ ${rebalancePrototype.toLocaleString()}</span>
-                    </div>
-                    <div class="flex justify-between font-bold mono text-xs md:text-sm text-emerald-600">
-                        <span>➜ 買入 00865B (10% 短債)</span>
-                        <span>$ ${rebalanceCash.toLocaleString()}</span>
-                    </div>
-                `;
+                let htmlCmd = '';
+                const formatDiff = (label, diff) => {
+                    if (diff === 0) return `<div class="flex justify-between font-bold mono text-xs md:text-sm text-slate-500"><span>${label}</span> <span>持平</span></div>`;
+                    const isBuy = diff > 0;
+                    return `<div class="flex justify-between font-bold mono text-xs md:text-sm ${isBuy ? 'text-blue-600':'text-red-600'}">
+                        <span>${isBuy ? '買入' : '賣出'} ${label}</span>
+                        <span>$ ${Math.abs(diff).toLocaleString()}</span>
+                    </div>`;
+                };
 
-                annualDesc.innerHTML = `
-                    <strong>動作解析：</strong> 00631L 扣除年初基準及年中追加本金後，<strong>年度實質淨獲利為 $${Math.round(netGain631L).toLocaleString()}</strong>。
-                    依更新策略：賣出此實質淨利之 30%（即 $${rebalanceTotal.toLocaleString()}）。
-                    其中 <strong>20%（$${rebalancePrototype.toLocaleString()}）買入 00662</strong> 繼續滾動成長，<strong>10%（$${rebalanceCash.toLocaleString()}）買入短債 00865B</strong>（0% 曝險鎖利儲備）。
-                `;
+                htmlCmd += formatDiff(lbl1, diff1);
+                htmlCmd += formatDiff(lbl2, diff2);
+                htmlCmd += formatDiff(lbl3, diff3);
+                annualCmdContainer.innerHTML = htmlCmd;
+
+                annualDesc.innerHTML = `<strong>動作解析：</strong> 目前模式為傳統無腦強制平衡。不論損益，於年終直接依目標配比 <strong>${tRatio1}:${tRatio2}:${tRatio3}</strong> 重新配置總資產規模。請手動執行上方指令完成重置。`;
+
             } else {
-                trendTag.innerText = "📉 判定為：下跌年 (正二無實質獲利或虧損)";
-                trendTag.className = "text-[10px] font-black px-2 py-0.5 rounded bg-red-100 text-red-700";
+                // 【聰明獲利鎖利/抄底模式】
+                smartStatsPanel.classList.remove('hidden');
 
-                const rebalanceAmount = Math.round(startTotal * 0.02);
-                annualPanel.className = "p-5 rounded-xl border border-red-200 bg-red-50/50 flex flex-col justify-between items-start gap-4";
-                annualBtn.className = "action-buy text-[10px] font-bold rounded uppercase tracking-wider px-2 py-0.5";
-                annualBtn.innerText = "執行交易 EXECUTING";
-                
-                annualCmdContainer.innerHTML = `
-                    <div class="flex justify-between font-black mono text-sm md:text-base text-red-600 border-b border-red-100 pb-1.5">
-                        <span>賣出 00865B (短債 2%)</span>
-                        <span>$ ${rebalanceAmount.toLocaleString()}</span>
-                    </div>
-                    <div class="flex justify-between font-bold mono text-xs md:text-sm text-blue-600 pt-1">
-                        <span>➜ 買入 00631L (正二)</span>
-                        <span>$ ${rebalanceAmount.toLocaleString()}</span>
-                    </div>
-                `;
+                const netGain2 = val2 - s2 - a2;
+                const pctChange2 = s2 > 0 ? (netGain2 / s2 * 100) : 0;
 
-                annualDesc.innerHTML = `<strong>動作解析：</strong> 00631L 扣除追加本金後並無實質利潤。判定為下跌年。依策略從短債（00865B）中，賣出<strong>年初總資產（$${Math.round(startTotal).toLocaleString()}）之 2% 金額（即 $${rebalanceAmount.toLocaleString()}）</strong>，全數買入 00631L 進行低點抄底。`;
+                document.getElementById('netGain2Display').innerText = `${netGain2 >= 0 ? '+' : ''}$ ${Math.round(netGain2).toLocaleString()}`;
+                document.getElementById('netGain2Display').className = `text-sm font-bold mono ${netGain2 >= 0 ? 'text-blue-600' : 'text-red-500'}`;
+                document.getElementById('pctChange2Display').innerText = `${pctChange2 >= 0 ? '+' : ''}${pctChange2.toFixed(2)}%`;
+                document.getElementById('pctChange2Display').className = `text-sm font-bold mono ${pctChange2 >= 0 ? 'text-blue-600' : 'text-red-500'}`;
+
+                const isUpYear = netGain2 > 0;
+
+                if (isUpYear) {
+                    trendTag.innerText = `📈 判定為：上漲年 (${lbl2} 淨獲利 > 0)`;
+                    trendTag.className = "text-[10px] font-black px-2 py-0.5 rounded bg-blue-100 text-blue-700";
+
+                    const rebalanceTotal = Math.round(netGain2 * 0.3);
+                    const rebalancePrototype = Math.round(netGain2 * 0.2);
+                    const rebalanceCash = Math.round(netGain2 * 0.1);
+
+                    annualPanel.className = "p-5 rounded-xl border border-blue-200 bg-blue-50/50 flex flex-col justify-between items-start gap-4";
+                    annualBtn.className = "action-sell text-[10px] font-bold rounded uppercase tracking-wider px-2 py-0.5";
+                    annualBtn.innerText = "鎖利防禦";
+
+                    annualCmdContainer.innerHTML = `
+                        <div class="flex justify-between font-black mono text-sm md:text-base text-red-600 border-b border-blue-100 pb-1.5">
+                            <span>賣出正二 ${lbl2}</span>
+                            <span>$ ${rebalanceTotal.toLocaleString()}</span>
+                        </div>
+                        <div class="flex justify-between font-bold mono text-xs md:text-sm text-blue-600 pt-1">
+                            <span>➜ 買入原型 ${lbl1} (淨利 20%)</span>
+                            <span>$ ${rebalancePrototype.toLocaleString()}</span>
+                        </div>
+                        <div class="flex justify-between font-bold mono text-xs md:text-sm text-emerald-600">
+                            <span>➜ 買入短債 ${lbl3} (淨利 10%)</span>
+                            <span>$ ${rebalanceCash.toLocaleString()}</span>
+                        </div>
+                    `;
+
+                    annualDesc.innerHTML = `
+                        <strong>動作解析：</strong> 槓桿資產 ${lbl2} 扣除年初基線與本年追加成本後，<strong>年度實質淨利為 $${Math.round(netGain2).toLocaleString()}</strong>。<br>
+                        依據設定，年終強制贖回此利潤之 30%（即 $${rebalanceTotal.toLocaleString()}）。其中 <strong>20% 買入 ${lbl1}</strong> 滾動複利，<strong>10% 買入 ${lbl3}</strong> 鎖定成為零曝險現金資產儲備。
+                    `;
+                } else {
+                    trendTag.innerText = `📉 判定為：下跌年 (${lbl2} 無實質利潤)`;
+                    trendTag.className = "text-[10px] font-black px-2 py-0.5 rounded bg-red-100 text-red-700";
+
+                    const rebalanceAmount = Math.round(startTotal * 0.02);
+
+                    annualPanel.className = "p-5 rounded-xl border border-red-200 bg-red-50/50 flex flex-col justify-between items-start gap-4";
+                    annualBtn.className = "action-buy text-[10px] font-bold rounded uppercase tracking-wider px-2 py-0.5";
+                    annualBtn.innerText = "抄底注資";
+
+                    annualCmdContainer.innerHTML = `
+                        <div class="flex justify-between font-black mono text-sm md:text-base text-red-600 border-b border-red-100 pb-1.5">
+                            <span>賣出短債 ${lbl3} (總本 2%)</span>
+                            <span>$ ${rebalanceAmount.toLocaleString()}</span>
+                        </div>
+                        <div class="flex justify-between font-bold mono text-xs md:text-sm text-blue-600 pt-1">
+                            <span>➜ 買入正二 ${lbl2}</span>
+                            <span>$ ${rebalanceAmount.toLocaleString()}</span>
+                        </div>
+                    `;
+
+                    annualDesc.innerHTML = `<strong>動作解析：</strong> 由於本年度核心槓桿工具 ${lbl2} 無利潤可期，啟動防禦性加碼。自 ${lbl3} 提撥年初總本金（$${Math.round(startTotal).toLocaleString()}）之 <strong>2% 金額（$${rebalanceAmount.toLocaleString()}）</strong> 全數加碼買進 ${lbl2} 做反彈抄底。`;
+                }
             }
 
-            // 3. Projection 
-            const r = 0.182 / 12;
-            const target = 10000000;
-            let m = 0; let fv = totalNow;
-            while(fv < target && m < 480) { fv = fv * (1+r) + monthly; m++; }
-            document.getElementById('reachTime').innerText = `${Math.floor(m/12)} 年 ${m%12} 月`;
+            // 3. 財富目標投影 (使用由上方動態加權算出來的 weightedRoI)
+            const r = (weightedRoI / 100) / 12;
+            
+            let months = 0;
+            let fv = totalNow;
+            
+            while (fv < finalGoal && months < 600) {
+                fv = fv * (1 + r) + monthly;
+                months++;
+            }
 
-            saveState();
+            if (months >= 600) {
+                document.getElementById('reachTime').innerText = "大於 50 年";
+            } else {
+                document.getElementById('reachTime').innerText = `${Math.floor(months / 12)} 年 ${months % 12} 月`;
+            }
+
+            saveToStorage();
+            if (!silent) {
+                showToast("變更已自動儲存至瀏覽器");
+            }
         }
 
         window.onload = function() {
-            loadState();
-            calculate();
+            initStorage();
+            // 預設切換至暫存或預設的台股配置
+            switchProfile(appState.currentProfile);
         }
     </script>
 </body>
